@@ -10,5 +10,9 @@ public class HelloController {
 	public String hello() {
 		return "hello";
 	}
+	@RequestMapping("/hello_feat_list2.do")
+	public String hello_feat_list2() {
+		return "hello";
+	}
 	
 }
