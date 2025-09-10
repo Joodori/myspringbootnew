@@ -11,4 +11,9 @@ public class HelloController {
 		return "hello";
 	}
 	
+	@RequestMapping("/hello_feat_list.do")
+	public String hello_feat_list() {
+		return "hello";
+	}
+	
 }
