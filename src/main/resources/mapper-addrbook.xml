@@ -6,7 +6,8 @@
 		SELECT ab_id abId
 		, ab_name abName
 		, ab_email abEmail
-		, ab_tel abTel
+		, ab_tel
+		abTel
 		, ab_comdept abComdept
 		, ab_birth abBirth
 		, ab_memo abMemo
@@ -15,28 +16,49 @@
 	</select>
 	<insert id="insertDB"
 		parameterType="lx.edu.springmvc.vo.AddrBookVO">
-		INSERT INTO addrbook (ab_name, ab_email, ab_comdept, ab_birth, ab_tel, ab_memo)
-		VALUES (#{abName}, #{abEmail}, #{abComdept}, #{abBirth}, #{abTel}, #{abMemo})
+		INSERT INTO addrbook (ab_name, ab_email, ab_comdept,
+		ab_birth, ab_tel, ab_memo)
+		VALUES (#{abName}, #{abEmail}, #{abComdept},
+		#{abBirth}, #{abTel}, #{abMemo})
 	</insert>
 	<delete id="deleteDB" parameterType="Integer">
 		<!-- SQL에서 delete 구문은 [[ DELETE FROM <table> WHERE <특정 행을 지우기 위한 컬럼> ]] -->
 		DELETE FROM addrbook WHERE ab_id = #{abId}
 	</delete>
-	<select id="selectById" parameterType="Integer" resultType="lx.edu.springmvc.vo.AddrBookVO">
-		SELECT 
-		  ab_id abId
+	<select id="selectById" parameterType="Integer"
+		resultType="lx.edu.springmvc.vo.AddrBookVO">
+		SELECT
+		ab_id abId
 		, ab_name abName
 		, ab_email abEmail
 		, ab_tel abTel
-		, ab_comdept abComdept
+		, ab_comdept
+		abComdept
 		, ab_birth abBirth
 		, ab_memo abMemo
 		FROM addrbook
-		WHERE ab_id = #{abId}
+		WHERE ab_id =
+		#{abId}
 	</select>
-	<update id="updateDB" parameterType="lx.edu.springmvc.vo.AddrBookVO">
-		UPDATE addrbook 
-		SET ab_name = #{abName}, ab_email = #{abEmail}, ab_tel = #{abTel}, ab_birth = #{abBirth}, ab_comdept = #{abComdept}, ab_memo = #{abMemo}
+	<update id="updateDB"
+		parameterType="lx.edu.springmvc.vo.AddrBookVO">
+		UPDATE addrbook
+		SET ab_name = #{abName}, ab_email = #{abEmail}, ab_tel = #{abTel},
+		ab_birth = #{abBirth}, ab_comdept = #{abComdept}, ab_memo = #{abMemo}
 		WHERE ab_id = #{abId};
 	</update>
+	
+	<update id="updateAddr" parameterType="lx.edu.springmvc.vo.AddrBookVO">
+		update addrbook
+		<trim prefix="SET" suffixOverrides=", ">
+				<if test="abName != null"> ab_name = #{abName}, </if>
+				<if test="abEmail != null"> ab_email = #{abEmail}, </if>
+				<if test="abComdept != null"> ab_comdept = #{abComdept}, </if>
+				<if test="abBirth != null"> ab_birth = #{abBirth}, </if>
+				<if test="abTel != null"> ab_tel = #{abTel}, </if>
+				<if test="abMemo != null"> ab_memo = #{abMemo} </if>				
+		</trim>
+		where ab_id = #{abId}
+	</update>
+	
 </mapper>

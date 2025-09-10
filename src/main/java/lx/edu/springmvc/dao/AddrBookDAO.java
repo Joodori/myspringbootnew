@@ -34,7 +34,7 @@ public class AddrBookDAO {
 	}
 	
 	public int updateDB(AddrBookVO ab) throws Exception {
-		return session.update("updateDB",ab);
+		return session.update("updateAddr",ab);
 	}
 	
 	public AddrBookVO selectById(int id) throws Exception {

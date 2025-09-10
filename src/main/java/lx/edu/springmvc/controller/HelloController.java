@@ -12,6 +12,16 @@ public class HelloController {
 	}
 	@RequestMapping("/hello_feat_list2.do")
 	public String hello_feat_list2() {
+		// feat/edit branch에서 작업
+		//ㅇ
+		//ㅁㅁ
+		//ㅇㅇㅇ
+		//ㅁ
+		//ㅇㅇ
+		//ㅁㅁㅁ
+		// 다른 branch에서 각각 ㅇ 과 ㅁ 을지워서 충돌일으키기
+		
+		
 		return "hello";
 	}
 	
