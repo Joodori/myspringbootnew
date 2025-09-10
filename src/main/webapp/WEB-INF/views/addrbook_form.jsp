@@ -42,6 +42,9 @@
   <tr>
     <td colspan=2 align=center><input type=submit value="저장"><input type=reset value="취소"></td>
 </tr>
+<tr>
+<h1>eclipse에서 추가함</h1>
+</tr>
 </table>
 </form>
 
