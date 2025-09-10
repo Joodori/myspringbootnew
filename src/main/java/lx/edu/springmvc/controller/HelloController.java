@@ -30,4 +30,8 @@ public class HelloController {
 		return "hello";
 	}
 	
+	
+	public void taesu() {
+		//씨발진짜 울고싶다 살려줌매
+	}
 }
