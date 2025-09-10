@@ -49,6 +49,14 @@ public class AddrBookController {
 		req.setAttribute("data", list); 
 		return "addrbook_list";
 	}
+
+	@RequestMapping("addrbook_list2.do")
+	public String list2(HttpSession session, HttpServletRequest req) throws Exception{
+		List<AddrBookVO> list = dao.getDBList();
+		req.setAttribute("data", list); 
+		return "addrbook_list";		
+	}
+	
 	
 	@RequestMapping("/insert.do")
 	public String insert(AddrBookVO vo) throws Exception {
