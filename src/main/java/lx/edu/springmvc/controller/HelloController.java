@@ -30,4 +30,8 @@ public class HelloController {
 		return "hello";
 	}
 	
+	public void joohyung() {
+		//asdasd
+	}
+	
 }
