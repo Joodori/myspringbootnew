@@ -28,5 +28,66 @@
         "pause": "F7",
         "stop": "F8",
         "record_toggle": "F9"
+    },
+    "anti_detect": {
+        "enabled": true,
+        "noise_action": {
+            "enabled": true,
+            "interval_min_sec": 30,
+            "interval_max_sec": 90,
+            "description": "사냥 중 잡행동(인벤토리/미니맵/점프 등) 삽입 간격"
+        },
+        "channel_change": {
+            "enabled": true,
+            "interval_min_sec": 900,
+            "interval_max_sec": 2400,
+            "description": "채널 변경 주기 (LBD 단일위치 장기체류 방지)"
+        },
+        "input_fingerprint": {
+            "enabled": true,
+            "hold_distribution": "lognormal",
+            "hold_sigma": 0.22,
+            "inter_key_sigma": 0.18,
+            "micro_jitter": true,
+            "time_field_randomize": true,
+            "debounce_simulate": true,
+            "description": "입력 지문 랜덤화 (키 홀드/딜레이 로그정규분포)"
+        },
+        "rhythm": {
+            "enabled": true,
+            "group_size_min": 2,
+            "group_size_max": 5,
+            "hesitation_base_prob": 0.015,
+            "mistake_base_prob": 0.01,
+            "description": "리듬 그룹 기반 입력 패턴 (버스트→쉬기→버스트)"
+        },
+        "fatigue": {
+            "enabled": true,
+            "warmup_min": 30,
+            "normal_min": 60,
+            "tired_min": 90,
+            "description": "세션 시간에 따른 피로도 시뮬레이션"
+        },
+        "lcp_defense": {
+            "enabled": true,
+            "history_size": 20,
+            "repeat_penalty_2": 0.6,
+            "repeat_penalty_3": 0.3,
+            "consecutive_penalty": 0.5,
+            "description": "LCP 유사도 감소를 위한 패턴 선택 가중치 조정"
+        },
+        "process_guard": {
+            "enabled": true,
+            "window_title_disguise": true,
+            "footprint_minimize": true,
+            "env_check_on_start": true,
+            "description": "NGS 프로세스 스캔 방어 (윈도우 타이틀/모듈 은닉)"
+        },
+        "variance_threshold": {
+            "hold_cv_min": 0.20,
+            "delay_cv_min": 0.20,
+            "warn_on_low_variance": true,
+            "description": "변동계수(CV) 자가진단 임계값 (CV < 0.2이면 위험)"
+        }
     }
 }
