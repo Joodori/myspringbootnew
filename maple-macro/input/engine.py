@@ -416,6 +416,43 @@ class InputEngine:
         inp_up.union.mi.time = self._get_randomized_time_field()
         self._send_input(1, ctypes.byref(inp_up), ctypes.sizeof(inp_up))
 
+    # --- 낮은 수준 API: 스캔코드 직접 제어 (패턴 재생용) ---
+
+    def raw_key_down(self, scan_code: int) -> None:
+        """
+        스캔코드로 키 다운만 실행한다 (키 업 없이).
+        패턴 재생 시 key_down/key_up을 별도 타이밍으로 제어할 때 사용.
+        """
+        if scan_code == 0:
+            return
+
+        if self._use_interception:
+            try:
+                # interception에서 스캔코드로 직접 key_down
+                interception.key_down(scan_code)
+                return
+            except Exception:
+                pass
+
+        self._send_key_down(scan_code)
+
+    def raw_key_up(self, scan_code: int) -> None:
+        """
+        스캔코드로 키 업만 실행한다.
+        패턴 재생 시 key_down/key_up을 별도 타이밍으로 제어할 때 사용.
+        """
+        if scan_code == 0:
+            return
+
+        if self._use_interception:
+            try:
+                interception.key_up(scan_code)
+                return
+            except Exception:
+                pass
+
+        self._send_key_up(scan_code)
+
     # --- 공개 API (v2: 인간 리듬 통합) ---
 
     def press_key(self, key: str, hold_ms: Optional[float] = None) -> None:

@@ -21,8 +21,14 @@ from core.timing import TimingEngine
 _input_engine = None
 
 
+def set_input_engine(engine) -> None:
+    """외부에서 입력 엔진 인스턴스를 설정한다 (controller와 공유)."""
+    global _input_engine
+    _input_engine = engine
+
+
 def _get_input_engine():
-    """InputEngine 인스턴스를 지연 로드한다."""
+    """입력 엔진 인스턴스를 반환한다."""
     global _input_engine
     if _input_engine is None:
         try:
@@ -273,11 +279,15 @@ class PatternEngine:
         speed_max = cfg.get("speed_factor.max", 1.15)
         speed_factor = random.uniform(speed_min, speed_max)
 
-        # 이벤트 순서대로 재생
+        # 이벤트 순서대로 재생 (스캔코드 직접 제어)
         prev_timestamp = 0.0
+        pressed_keys: set[int] = set()  # 현재 눌려있는 키 추적
+
         for event in pattern:
             if stop_check():
                 # 중단 요청 시 모든 키 해제 후 종료
+                for sc in pressed_keys:
+                    engine.raw_key_up(sc)
                 self._release_all_keys()
                 return False
 
@@ -293,12 +303,20 @@ class PatternEngine:
             # 지터 삽입 확인
             self._timing.insert_jitter_if_needed()
 
-            # 키 이벤트 재생
+            # 키 이벤트 재생: key_down/key_up을 녹화된 타이밍 그대로 재현
+            sc = event.scan_code
             if event.is_key_down:
-                engine.press_key(str(event.scan_code), hold_ms=0)
-            # key_up은 press_key에 포함되므로 별도 처리 불필요 (홀드 타이밍으로 관리)
+                engine.raw_key_down(sc)
+                pressed_keys.add(sc)
+            elif event.is_key_up:
+                engine.raw_key_up(sc)
+                pressed_keys.discard(sc)
 
             prev_timestamp = event.timestamp
+
+        # 재생 완료 후 남은 키 해제
+        for sc in pressed_keys:
+            engine.raw_key_up(sc)
 
         return True
 

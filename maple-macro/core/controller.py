@@ -24,6 +24,7 @@ from core.anti_detect import BehaviorDiversityEngine
 from core.human_rhythm import HumanRhythm
 from core.process_guard import ProcessGuard
 from pattern.engine import PatternEngine
+from pattern.engine import set_input_engine as _set_pattern_input_engine
 from screen.monitor import ScreenMonitor
 from input.engine import InputEngine
 from input.human_mouse import HumanLikeMouse
@@ -69,6 +70,9 @@ class CoreController:
         # 패턴 엔진
         pattern_path = self.config.get("pattern_path", "patterns")
         self.pattern_engine = PatternEngine(base_path=pattern_path)
+        
+        # 패턴 엔진에 입력 엔진 공유 (재생 시 raw_key_down/up 사용)
+        _set_pattern_input_engine(self.input_engine)
         
         # 화면 감시
         game_region = self.config.get("game_region")
