@@ -1,0 +1,32 @@
+{
+    "game_region": null,
+    "cycle_duration_ms": 60000,
+    "session_limit_min": 120,
+    "jitter": {
+        "interval_min_ms": 9000,
+        "interval_max_ms": 16000,
+        "duration_min_ms": 2,
+        "duration_max_ms": 6
+    },
+    "speed_factor": {
+        "min": 0.85,
+        "max": 1.15
+    },
+    "hunt_weights": {
+        "routine": 0.5,
+        "skillA": 0.25,
+        "skillB": 0.25
+    },
+    "templates": {},
+    "alerts": {
+        "auto_solve": ["text_captcha", "click_5", "click_2", "rune"],
+        "manual_only": ["violetta", "shape_tracking", "correct_sentence"],
+        "notify_method": "sound"
+    },
+    "hotkeys": {
+        "start": "F6",
+        "pause": "F7",
+        "stop": "F8",
+        "record_toggle": "F9"
+    }
+}
