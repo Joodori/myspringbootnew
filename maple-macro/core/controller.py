@@ -232,7 +232,7 @@ class CoreController:
     # ─── 패턴 녹화 (GUI에서 호출) ───
 
     def start_recording(self, category: str) -> None:
-        """지정 카테고리로 패턴 녹화를 시작한다."""
+        """지정 카테고리로 패턴 녹화를 시작한다 (수동 모드)."""
         self._recording_active = True
         self._log(f"패턴 녹화 시작: {category} (F9로 중지)")
         threading.Thread(
@@ -242,12 +242,37 @@ class CoreController:
             name="PatternRecord"
         ).start()
 
+    def start_auto_recording(self, category: str, duration_sec: int = 60,
+                              on_countdown: Optional[Callable[[int], None]] = None,
+                              on_finished: Optional[Callable[[], None]] = None) -> None:
+        """
+        자동 녹화: alt+tab으로 게임 전환 → 지정 시간 녹화 → 자동 중지 + 복귀.
+
+        흐름:
+        1. alt+tab으로 메이플스토리 창으로 전환
+        2. 1초 대기 (창 포커스 안정화)
+        3. keyboard 후킹으로 키 녹화 시작
+        4. duration_sec 동안 녹화 (카운트다운 콜백)
+        5. 녹화 종료 + alt+tab으로 매크로 창 복귀
+
+        on_countdown: 매초 남은 시간(초)을 전달하는 콜백
+        on_finished: 녹화 완료 시 호출되는 콜백
+        """
+        self._recording_active = True
+        self._log(f"자동 녹화 시작: {category} ({duration_sec}초)")
+        threading.Thread(
+            target=self._auto_record_pattern,
+            args=(category, duration_sec, on_countdown, on_finished),
+            daemon=True,
+            name="AutoRecord"
+        ).start()
+
     def stop_recording(self) -> None:
         """패턴 녹화를 중지한다."""
         self._recording_active = False
 
     def _record_pattern(self, category: str) -> None:
-        """실제 녹화 실행 (별도 스레드)."""
+        """실제 녹화 실행 (수동 모드, 별도 스레드)."""
         try:
             events = self.pattern_engine.record(
                 category=category,
@@ -261,6 +286,62 @@ class CoreController:
                 self._log("녹화 취소됨 (이벤트 없음)")
         except Exception as e:
             self._log(f"녹화 오류: {e}")
+
+    def _auto_record_pattern(self, category: str, duration_sec: int,
+                              on_countdown: Optional[Callable[[int], None]],
+                              on_finished: Optional[Callable[[], None]]) -> None:
+        """자동 녹화 실행 (별도 스레드)."""
+        try:
+            # ── 1단계: alt+tab으로 게임 창으로 전환 ──
+            self._log("게임 창으로 전환 중 (Alt+Tab)...")
+            self._send_alt_tab()
+            time.sleep(1.0)  # 창 포커스 안정화 대기
+
+            # ── 2단계: 녹화 시작 ──
+            self._log(f"녹화 중... ({duration_sec}초 동안 사냥하세요)")
+            events = self.pattern_engine.record(
+                category=category,
+                on_stop_check=lambda: not self._recording_active,
+                auto_stop_sec=duration_sec,
+                on_countdown=on_countdown,
+            )
+
+            # ── 3단계: 녹화 종료 + 매크로 창으로 복귀 ──
+            self._recording_active = False
+            self._log("녹화 완료, 매크로 창으로 복귀 중...")
+            self._send_alt_tab()
+            time.sleep(0.5)
+
+            if events:
+                self._log(f"패턴 저장 완료: {category} ({len(events)}개 이벤트)")
+                if self._on_pattern_count_change:
+                    self._on_pattern_count_change()
+            else:
+                self._log("녹화 취소됨 (이벤트 없음)")
+
+            # GUI 콜백
+            if on_finished:
+                on_finished()
+
+        except Exception as e:
+            self._recording_active = False
+            self._log(f"자동 녹화 오류: {e}")
+            if on_finished:
+                on_finished()
+
+    def _send_alt_tab(self) -> None:
+        """Alt+Tab을 전송하여 창을 전환한다."""
+        try:
+            self.input_engine.raw_key_down(0x38)  # LAlt down
+            time.sleep(0.05)
+            self.input_engine.raw_key_down(0x0F)  # Tab down
+            time.sleep(0.05)
+            self.input_engine.raw_key_up(0x0F)    # Tab up
+            time.sleep(0.05)
+            self.input_engine.raw_key_up(0x38)    # LAlt up
+            time.sleep(0.3)  # 창 전환 애니메이션 대기
+        except Exception as e:
+            self._log(f"Alt+Tab 전송 오류: {e}")
 
     # ─── 사냥 루프 (v2: 안티 감지 통합) ───
 

@@ -269,6 +269,8 @@ if _PYQT_AVAILABLE:
         sig_state_changed = pyqtSignal(str)
         sig_log_message = pyqtSignal(str)
         sig_pattern_count_changed = pyqtSignal()
+        sig_countdown = pyqtSignal(int)          # 녹화 카운트다운 (남은 초)
+        sig_recording_finished = pyqtSignal()    # 자동 녹화 완료
 
         def __init__(self, parent: Optional[QWidget] = None) -> None:
             """메인 윈도우를 초기화하고 UI를 구성한다."""
@@ -317,7 +319,7 @@ if _PYQT_AVAILABLE:
             # 상태바
             self._statusbar = QStatusBar()
             self.setStatusBar(self._statusbar)
-            self._statusbar.showMessage("준비됨 | F6: 시작  F7: 일시정지  F8: 정지  F9: 녹화")
+            self._statusbar.showMessage("준비됨 | F6: 시작  F7: 일시정지  F8: 정지  F9: 자동녹화")
 
         def _create_status_section(self) -> QGroupBox:
             """상태 표시 영역을 생성한다."""
@@ -429,10 +431,13 @@ if _PYQT_AVAILABLE:
             btn_side = QVBoxLayout()
             btn_side.setSpacing(4)
 
-            self._record_btn = QPushButton("⏺ 녹화\n(F9)")
+            self._record_btn = QPushButton("⏺ 자동녹화\n(F9)")
             self._record_btn.setObjectName("recordBtn")
             self._record_btn.setFixedSize(64, 44)
-            self._record_btn.setToolTip("선택한 카테고리로 패턴 녹화 시작/중지")
+            self._record_btn.setToolTip(
+                "녹화 시작: 자동으로 게임창 전환 → 지정 시간 녹화 → 자동 종료\n"
+                "게임에서 실제로 사냥하는 키만 녹화됩니다"
+            )
             btn_side.addWidget(self._record_btn)
 
             self._test_btn = QPushButton("▶ 테스트")
@@ -450,6 +455,27 @@ if _PYQT_AVAILABLE:
             list_layout.addLayout(btn_side)
 
             layout.addLayout(list_layout)
+
+            # 녹화 설정 + 카운트다운 표시
+            rec_settings = QHBoxLayout()
+            rec_settings.setSpacing(4)
+
+            rec_settings.addWidget(QLabel("녹화 시간:"))
+            self._rec_duration_spin = QSpinBox()
+            self._rec_duration_spin.setRange(10, 300)
+            self._rec_duration_spin.setValue(60)
+            self._rec_duration_spin.setSuffix("초")
+            self._rec_duration_spin.setToolTip("자동 녹화 지속 시간 (10~300초)")
+            self._rec_duration_spin.setFixedWidth(80)
+            rec_settings.addWidget(self._rec_duration_spin)
+
+            self._countdown_label = QLabel("")
+            self._countdown_label.setFont(QFont("Consolas", 11, QFont.Bold))
+            self._countdown_label.setAlignment(Qt.AlignCenter)
+            self._countdown_label.setStyleSheet(f"color: {_COLORS['accent']};")
+            rec_settings.addWidget(self._countdown_label, stretch=1)
+
+            layout.addLayout(rec_settings)
 
             # 기본 카테고리 선택
             self._select_category("routine")
@@ -582,6 +608,8 @@ if _PYQT_AVAILABLE:
             self.sig_state_changed.connect(self._on_state_changed_ui)
             self.sig_log_message.connect(self._on_log_message_ui)
             self.sig_pattern_count_changed.connect(self._refresh_pattern_counts)
+            self.sig_countdown.connect(self._on_countdown_ui)
+            self.sig_recording_finished.connect(self._on_recording_finished_ui)
 
         def _start_timers(self) -> None:
             """주기적 업데이트 타이머를 시작한다."""
@@ -704,29 +732,43 @@ if _PYQT_AVAILABLE:
         # ─── 녹화/테스트/삭제 핸들러 ───
 
         def _on_record_toggle(self) -> None:
-            """녹화 버튼 클릭 핸들러. 녹화 시작/중지를 토글한다."""
+            """녹화 버튼 클릭 핸들러. 자동 녹화 시작/중지를 토글한다."""
             if not self._controller:
                 self._log("[오류] 컨트롤러가 연결되지 않았습니다.")
                 return
 
             if self._is_recording:
-                # 녹화 중지
+                # 녹화 중지 (수동 중단)
                 self._is_recording = False
                 self._controller.stop_recording()
-                self._record_btn.setText("⏺ 녹화\n(F9)")
+                self._record_btn.setText("⏺ 자동녹화\n(F9)")
                 self._record_btn.setStyleSheet("")
-                self._log(f"녹화 중지: {self._current_category}")
+                self._countdown_label.setText("")
+                self._rec_duration_spin.setEnabled(True)
+                self._log(f"녹화 수동 중지: {self._current_category}")
                 self._refresh_file_list()
             else:
-                # 녹화 시작
+                # 자동 녹화 시작
                 self._is_recording = True
+                duration = self._rec_duration_spin.value()
                 self._record_btn.setText("⏹ 중지\n(F9)")
                 self._record_btn.setStyleSheet(
                     f"background-color: {_COLORS['red']}; "
                     f"border-color: {_COLORS['red']};"
                 )
-                self._controller.start_recording(self._current_category)
-                self._log(f"녹화 시작: {self._current_category} (마우스 왼쪽 클릭으로 녹화 시작/종료)")
+                self._rec_duration_spin.setEnabled(False)
+                self._countdown_label.setText(f"게임 전환 중...")
+
+                self._controller.start_auto_recording(
+                    category=self._current_category,
+                    duration_sec=duration,
+                    on_countdown=lambda sec: self.sig_countdown.emit(sec),
+                    on_finished=lambda: self.sig_recording_finished.emit(),
+                )
+                self._log(
+                    f"자동 녹화: {self._current_category} ({duration}초) "
+                    f"- 게임으로 전환 후 사냥하세요"
+                )
 
         def _on_test_pattern(self) -> None:
             """선택한 패턴을 1회 테스트 재생한다."""
@@ -822,6 +864,34 @@ if _PYQT_AVAILABLE:
         def _log(self, message: str) -> None:
             """로그 메시지를 추가하는 내부 편의 메서드."""
             self._on_log_message_ui(message)
+
+        # ─── 녹화 카운트다운 UI ───
+
+        def _on_countdown_ui(self, remaining: int) -> None:
+            """녹화 카운트다운 업데이트 (메인 스레드)."""
+            if remaining > 0:
+                mins = remaining // 60
+                secs = remaining % 60
+                self._countdown_label.setText(f"녹화 중 {mins:01d}:{secs:02d}")
+                # 10초 이하면 빨간색
+                if remaining <= 10:
+                    self._countdown_label.setStyleSheet(f"color: {_COLORS['red']};")
+                else:
+                    self._countdown_label.setStyleSheet(f"color: {_COLORS['green']};")
+            else:
+                self._countdown_label.setText("완료!")
+                self._countdown_label.setStyleSheet(f"color: {_COLORS['green']};")
+
+        def _on_recording_finished_ui(self) -> None:
+            """자동 녹화 완료 시 UI 복원 (메인 스레드)."""
+            self._is_recording = False
+            self._record_btn.setText("⏺ 자동녹화\n(F9)")
+            self._record_btn.setStyleSheet("")
+            self._rec_duration_spin.setEnabled(True)
+            self._refresh_file_list()
+            self._refresh_pattern_counts()
+            # 1초 후 카운트다운 레이블 초기화
+            QTimer.singleShot(1500, lambda: self._countdown_label.setText(""))
 
         # ─── 세션 타이머 업데이트 ───
 

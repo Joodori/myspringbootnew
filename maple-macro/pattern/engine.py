@@ -139,10 +139,14 @@ class PatternEngine:
         self,
         category: str,
         on_stop_check: Callable[[], bool] = lambda: False,
+        auto_stop_sec: Optional[int] = None,
+        on_countdown: Optional[Callable[[int], None]] = None,
     ) -> Optional[list[PatternEvent]]:
         """
         키보드 이벤트를 녹화한다.
         on_stop_check가 True를 반환하면 녹화를 중단한다.
+        auto_stop_sec: 자동 중지 시간(초). 설정하면 해당 시간 후 자동 종료.
+        on_countdown: 자동 녹화 시 매초 남은 초를 콜백.
         interception 우선 시도, 없으면 keyboard 라이브러리로 폴백.
         """
         if category not in self.CATEGORIES:
@@ -156,14 +160,50 @@ class PatternEngine:
         events: list[PatternEvent] = []
         start_time = time.monotonic()
 
+        # 자동 중지 타이머 설정
+        auto_stop_at = None
+        if auto_stop_sec and auto_stop_sec > 0:
+            auto_stop_at = time.monotonic() + auto_stop_sec
+
+        def _combined_stop_check() -> bool:
+            """on_stop_check 또는 자동 타이머 중 하나라도 True면 중지."""
+            if on_stop_check():
+                return True
+            if auto_stop_at and time.monotonic() >= auto_stop_at:
+                return True
+            return False
+
+        # 카운트다운 스레드 (자동 녹화시만)
+        countdown_thread = None
+        if auto_stop_sec and on_countdown:
+            def _run_countdown():
+                remaining = auto_stop_sec
+                while remaining > 0 and not _combined_stop_check():
+                    try:
+                        on_countdown(remaining)
+                    except Exception:
+                        pass
+                    time.sleep(1.0)
+                    remaining -= 1
+                # 마지막 0초
+                try:
+                    on_countdown(0)
+                except Exception:
+                    pass
+
+            countdown_thread = threading.Thread(
+                target=_run_countdown, daemon=True, name="Countdown"
+            )
+            countdown_thread.start()
+
         try:
             # 방법 1: interception 키보드 후킹
             try:
                 import interception as icp
-                self._record_with_interception(icp, events, start_time, on_stop_check)
+                self._record_with_interception(icp, events, start_time, _combined_stop_check)
             except (ImportError, OSError):
                 # 방법 2: keyboard 라이브러리 폴백
-                self._record_with_keyboard(events, start_time, on_stop_check)
+                self._record_with_keyboard(events, start_time, _combined_stop_check)
 
         finally:
             self._recording = False
@@ -264,8 +304,12 @@ class PatternEngine:
             "del": "delete", "ins": "insert",
         }
 
-        # F9 스캔코드 (녹화 중지키) 필터링용
-        _STOP_KEY_NAMES = {"f9"}
+        # 녹화에서 제외할 키: F9(중지키), Alt/Tab(창전환용)
+        _FILTER_KEY_NAMES = {
+            "f9",
+            "alt", "left alt", "right alt", "left menu", "right menu",
+            "tab",
+        }
 
         base_time = recorded[0].time
         converted_count = 0
@@ -274,8 +318,8 @@ class PatternEngine:
         for e in recorded:
             key_name_raw = (e.name or "").lower().strip()
 
-            # F9는 녹화 중지키이므로 제외
-            if key_name_raw in _STOP_KEY_NAMES:
+            # 녹화에서 제외할 키 (F9, Alt, Tab)
+            if key_name_raw in _FILTER_KEY_NAMES:
                 continue
 
             elapsed_ms = (e.time - base_time) * 1000.0
