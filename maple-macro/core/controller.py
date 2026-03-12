@@ -89,6 +89,7 @@ class CoreController:
         
         # 스레드 관리
         self._running = False
+        self._recording_active = False
         self._hunt_thread: Optional[threading.Thread] = None
         self._monitor_thread: Optional[threading.Thread] = None
         
@@ -130,7 +131,7 @@ class CoreController:
     def _change_state(self, new_state: State) -> None:
         """상태 전이 + 콜백 호출."""
         old_state = self.state_machine.current
-        self.state_machine.transition_to(new_state)
+        self.state_machine.transition(new_state)
         self._log(f"상태 변경: {old_state.value} → {new_state.value}")
         if self._on_state_change:
             try:
@@ -228,7 +229,8 @@ class CoreController:
 
     def start_recording(self, category: str) -> None:
         """지정 카테고리로 패턴 녹화를 시작한다."""
-        self._log(f"패턴 녹화 시작: {category}")
+        self._recording_active = True
+        self._log(f"패턴 녹화 시작: {category} (F9로 중지)")
         threading.Thread(
             target=self._record_pattern,
             args=(category,),
@@ -236,16 +238,19 @@ class CoreController:
             name="PatternRecord"
         ).start()
 
+    def stop_recording(self) -> None:
+        """패턴 녹화를 중지한다."""
+        self._recording_active = False
+
     def _record_pattern(self, category: str) -> None:
         """실제 녹화 실행 (별도 스레드)."""
         try:
             events = self.pattern_engine.record(
                 category=category,
-                on_stop_check=lambda: not self._running,
+                on_stop_check=lambda: not self._recording_active,
             )
             if events:
-                num = self.pattern_engine.save_pattern(category, events)
-                self._log(f"패턴 저장 완료: {category}{num} ({len(events)}개 이벤트)")
+                self._log(f"패턴 저장 완료: {category} ({len(events)}개 이벤트)")
                 if self._on_pattern_count_change:
                     self._on_pattern_count_change()
             else:

@@ -710,11 +710,13 @@ if _PYQT_AVAILABLE:
                 return
 
             if self._is_recording:
-                # 녹화 중지 (controller 내부에서 처리)
+                # 녹화 중지
                 self._is_recording = False
+                self._controller.stop_recording()
                 self._record_btn.setText("⏺ 녹화\n(F9)")
                 self._record_btn.setStyleSheet("")
                 self._log(f"녹화 중지: {self._current_category}")
+                self._refresh_file_list()
             else:
                 # 녹화 시작
                 self._is_recording = True

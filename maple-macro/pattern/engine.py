@@ -137,7 +137,7 @@ class PatternEngine:
         """
         키보드 이벤트를 녹화한다.
         on_stop_check가 True를 반환하면 녹화를 중단한다.
-        interception이 없으면 빈 리스트를 반환한다.
+        interception 우선 시도, 없으면 keyboard 라이브러리로 폴백.
         """
         if category not in self.CATEGORIES:
             return None
@@ -151,40 +151,13 @@ class PatternEngine:
         start_time = time.monotonic()
 
         try:
-            # interception 키보드 후킹 시도
+            # 방법 1: interception 키보드 후킹
             try:
                 import interception as icp
+                self._record_with_interception(icp, events, start_time, on_stop_check)
             except (ImportError, OSError):
-                # interception 없으면 녹화 불가 - 빈 리스트 반환
-                return events
-
-            while not on_stop_check():
-                try:
-                    # interception으로 키보드 이벤트 수신 (타임아웃 100ms)
-                    device = icp.wait(100)
-                    if device is None:
-                        continue
-
-                    stroke = icp.receive(device)
-                    if stroke is None:
-                        continue
-
-                    # 키보드 이벤트만 처리
-                    elapsed_ms = (time.monotonic() - start_time) * 1000.0
-                    event_type = "key_down" if stroke.state == 0 else "key_up"
-                    event = PatternEvent(
-                        event_type=event_type,
-                        key_code=stroke.code,
-                        scan_code=stroke.code,
-                        timestamp=elapsed_ms,
-                    )
-                    events.append(event)
-
-                    # 원래 입력을 그대로 전달 (투과)
-                    icp.send(device, stroke)
-
-                except Exception:
-                    continue
+                # 방법 2: keyboard 라이브러리 폴백
+                self._record_with_keyboard(events, start_time, on_stop_check)
 
         finally:
             self._recording = False
@@ -194,6 +167,78 @@ class PatternEngine:
             self.save_pattern(category, events)
 
         return events
+
+    def _record_with_interception(
+        self, icp, events: list[PatternEvent],
+        start_time: float, on_stop_check: Callable[[], bool],
+    ) -> None:
+        """인터셉션 드라이버로 키보드 이벤트를 녹화한다."""
+        while not on_stop_check():
+            try:
+                device = icp.wait(100)
+                if device is None:
+                    continue
+                stroke = icp.receive(device)
+                if stroke is None:
+                    continue
+                elapsed_ms = (time.monotonic() - start_time) * 1000.0
+                event_type = "key_down" if stroke.state == 0 else "key_up"
+                event = PatternEvent(
+                    event_type=event_type,
+                    key_code=stroke.code,
+                    scan_code=stroke.code,
+                    timestamp=elapsed_ms,
+                )
+                events.append(event)
+                icp.send(device, stroke)
+            except Exception:
+                continue
+
+    def _record_with_keyboard(
+        self, events: list[PatternEvent],
+        start_time: float, on_stop_check: Callable[[], bool],
+    ) -> None:
+        """
+        keyboard 라이브러리로 키보드 이벤트를 녹화한다 (인터셉션 없을 때 폴백).
+        """
+        try:
+            import keyboard as kb
+        except ImportError:
+            return  # keyboard도 없으면 녹화 불가
+
+        recorded: list[kb.KeyboardEvent] = []
+
+        def _on_key(e: kb.KeyboardEvent) -> None:
+            recorded.append(e)
+
+        # 모든 키보드 이벤트 후킹
+        kb.hook(_on_key)
+        try:
+            while not on_stop_check():
+                time.sleep(0.05)  # 50ms 폴링
+        finally:
+            kb.unhook_all()
+
+        # keyboard 이벤트를 PatternEvent로 변환
+        # 스캔코드 매핑 (역방향)
+        from input.engine import _SCAN_CODES
+        name_to_scan = {name: code for name, code in _SCAN_CODES.items()}
+
+        for e in recorded:
+            elapsed_ms = (e.time - recorded[0].time) * 1000.0 if recorded else 0.0
+            event_type = "key_down" if e.event_type == "down" else "key_up"
+            # 키 이름으로 스캔코드 찾기
+            key_name = e.name.lower() if e.name else ""
+            scan = e.scan_code if e.scan_code else name_to_scan.get(key_name, 0)
+            if scan == 0:
+                continue  # 알 수 없는 키 무시
+            event = PatternEvent(
+                event_type=event_type,
+                key_code=scan,
+                scan_code=scan,
+                timestamp=max(0, elapsed_ms),
+            )
+            events.append(event)
 
     def play_random(
         self,
