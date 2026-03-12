@@ -1,6 +1,12 @@
 """
 핵심 컨트롤러 모듈 - 전체 매크로 로직을 통합 관리하는 상태 머신 기반 컨트롤러.
 사냥 루프, 알림 감시, 패턴 재생, 거탐 처리를 조율한다.
+
+v2: 안티 감지 강화
+- BehaviorDiversityEngine: 잡행동/채널변경/LCP대응
+- HumanRhythm: 사람다운 키 입력 리듬
+- ProcessGuard: NGS 프로세스 은닉
+- 피로도 시뮬레이션: 시간에 따라 속도/실수율 변화
 """
 
 from __future__ import annotations
@@ -14,6 +20,9 @@ from typing import Optional, Callable
 from core.state import State, StateMachine
 from core.config import Config
 from core.timing import TimingEngine
+from core.anti_detect import BehaviorDiversityEngine
+from core.human_rhythm import HumanRhythm
+from core.process_guard import ProcessGuard
 from pattern.engine import PatternEngine
 from screen.monitor import ScreenMonitor
 from input.engine import InputEngine
@@ -34,10 +43,12 @@ class CoreController:
     - 메인 사냥 루프: 패턴 재생 + 버프/메소 체크
     - 감시 스레드: 거탐/룬 등 긴급 이벤트 감지
     
-    Weing-3.0V의 roop()+checker()를 개선하여:
-    - 명확한 상태 전이
-    - 우선순위 기반 처리 (거탐 > 룬 > 버프 > 사냥)
-    - 세션 시간 제한
+    v2 개선 (안티 감지):
+    - 사냥 사이클 중 잡행동(noise) 랜덤 삽입
+    - 패턴 선택 시 LCP 유사도 감소를 위한 가중치 조정
+    - 피로도에 따른 속도/실수 변화
+    - 사이클 간 딜레이를 인간 리듬으로 생성
+    - 채널 변경으로 단일 위치 장기 체류 방지
     """
 
     def __init__(self) -> None:
@@ -45,6 +56,11 @@ class CoreController:
         self.config = Config()
         self.state_machine = StateMachine()
         self.timing = TimingEngine()
+        
+        # ── 안티 감지 모듈 (v2) ──
+        self.behavior = BehaviorDiversityEngine()
+        self.rhythm = HumanRhythm()
+        self.process_guard = ProcessGuard()
         
         # 입력 엔진
         self.input_engine = InputEngine()
@@ -79,6 +95,7 @@ class CoreController:
         # 세션 관리
         self._session_start: float = 0.0
         self._session_limit_min: int = self.config.get("session_limit_min", 120)
+        self._cycle_count: int = 0
         
         # 콜백 (GUI 연동용)
         self._on_state_change: Optional[Callable[[State], None]] = None
@@ -94,6 +111,8 @@ class CoreController:
     def set_on_log(self, callback: Callable[[str], None]) -> None:
         """로그 메시지 발생 시 호출할 콜백 등록."""
         self._on_log = callback
+        # 하위 모듈에도 로그 콜백 전달
+        self.behavior.set_on_log(callback)
 
     def set_on_pattern_count_change(self, callback: Callable[[], None]) -> None:
         """패턴 수 변경 시 호출할 콜백 등록."""
@@ -127,8 +146,20 @@ class CoreController:
             self._log("이미 실행 중입니다.")
             return
         
+        # 환경 검사 (v2)
+        warnings = self.process_guard.check_environment()
+        for w in warnings:
+            self._log(f"[경고] {w}")
+        
         self._running = True
         self._session_start = time.time()
+        self._cycle_count = 0
+        
+        # 안티 감지 모듈 세션 리셋 (v2)
+        self.behavior.reset_session()
+        self.rhythm.reset_session()
+        self.input_engine.reset_session()  # v2: 입력 지문 리셋
+        
         self._change_state(State.HUNTING)
         
         # 사냥 스레드
@@ -143,13 +174,36 @@ class CoreController:
         )
         self._monitor_thread.start()
         
-        self._log("매크로 시작됨")
+        self._log("매크로 시작됨 (안티감지 v2 활성)")
 
     def stop(self) -> None:
         """매크로 정지."""
         self._running = False
         self._change_state(State.IDLE)
         self.input_engine.release_all()
+        
+        # 통계 출력 (v2)
+        stats = self.behavior.get_stats()
+        self._log(
+            f"세션 종료 | 사이클: {self._cycle_count} | "
+            f"잡행동: {stats['noise_count']}회 | "
+            f"채널변경: {stats['channel_changes']}회"
+        )
+        
+        # 리듬 자연스러움 자가진단 (v2)
+        cv = self.rhythm.get_delay_variance()
+        if cv >= 0:
+            natural = "정상" if cv >= 0.2 else "위험(너무 규칙적)"
+            self._log(f"리듬 변동계수: {cv:.3f} ({natural})")
+        
+        # v2: 입력 지문 통계
+        fp = self.input_engine.get_fingerprint_stats()
+        self._log(
+            f"입력 지문 | hold_cv: {fp['hold_cv']} ({fp['hold_status']}) | "
+            f"delay_cv: {fp['delay_cv']} ({fp['delay_status']}) | "
+            f"samples: {fp['samples']}"
+        )
+        
         self._log("매크로 정지됨")
 
     def toggle_pause(self) -> None:
@@ -175,7 +229,6 @@ class CoreController:
     def start_recording(self, category: str) -> None:
         """지정 카테고리로 패턴 녹화를 시작한다."""
         self._log(f"패턴 녹화 시작: {category}")
-        # 녹화는 별도 스레드에서 실행
         threading.Thread(
             target=self._record_pattern,
             args=(category,),
@@ -200,22 +253,25 @@ class CoreController:
         except Exception as e:
             self._log(f"녹화 오류: {e}")
 
-    # ─── 사냥 루프 ───
+    # ─── 사냥 루프 (v2: 안티 감지 통합) ───
 
     def _hunt_loop(self) -> None:
         """
-        메인 사냥 루프.
+        메인 사냥 루프 (v2).
         
-        Weing-3.0V의 roop()를 개선:
-        - 가중치 기반 패턴 카테고리 선택
-        - 세션 시간 제한
-        - 상태 머신 기반 분기
+        개선점:
+        - 잡행동(noise) 랜덤 삽입으로 행동 다양성 확보
+        - LCP 대응 가중치로 패턴 시퀀스 비반복화
+        - 인간 리듬 기반 사이클 딜레이
+        - 피로도에 따른 속도 변화
+        - 패턴 사이 미세 이동 삽입
+        - 채널 변경으로 위치 다양성
         """
-        self._log("사냥 루프 시작")
+        self._log("사냥 루프 시작 (안티감지 v2)")
         
         while self._running:
             try:
-                # 세션 시간 초과 체크
+                # ── 세션 시간 초과 체크 ──
                 elapsed_min = (time.time() - self._session_start) / 60
                 if elapsed_min >= self._session_limit_min:
                     self._log(f"세션 시간 초과 ({self._session_limit_min}분). 자동 정지.")
@@ -223,7 +279,7 @@ class CoreController:
                     self.stop()
                     break
                 
-                # 상태별 분기
+                # ── 상태별 분기 ──
                 state = self.state_machine.current
                 
                 if state == State.PAUSED:
@@ -242,9 +298,28 @@ class CoreController:
                     time.sleep(0.2)
                     continue
                 
-                # ─── 사냥 실행 ───
+                # ── 피로도 업데이트 (v2) ──
+                self.behavior.update_fatigue()
                 
-                # 1. 버프 체크 (Weing의 buff 우선순위 유지)
+                # ══════════════════════════════════
+                # ▼ 잡행동 삽입 체크 (v2) ▼
+                # ══════════════════════════════════
+                if self.behavior.should_insert_noise():
+                    self._log("[안티감지] 잡행동 삽입")
+                    self.behavior.execute_noise(self.input_engine)
+                    continue  # 잡행동 후 다음 사이클로
+                
+                # ══════════════════════════════════
+                # ▼ 채널 변경 체크 (v2) ▼
+                # ══════════════════════════════════
+                if self.behavior.should_change_channel():
+                    self._log("[안티감지] 채널 변경 시간")
+                    self.behavior.execute_channel_change(self.input_engine)
+                    continue
+                
+                # ── 사냥 실행 ──
+                
+                # 1. 버프 체크
                 buff_result = self.screen_monitor.find_template("buff_expired")
                 if buff_result and buff_result.found:
                     self._change_state(State.BUFFING)
@@ -263,7 +338,7 @@ class CoreController:
                     )
                     continue
                 
-                # 3. 포션 체크 (HP/MP 부족 시)
+                # 3. 포션 체크
                 potion_result = self.screen_monitor.find_template("potion_needed")
                 if potion_result and potion_result.found:
                     self.pattern_engine.play_random(
@@ -271,12 +346,18 @@ class CoreController:
                     )
                     continue
                 
-                # 4. 사냥 루틴 (가중치 기반 랜덤 선택)
+                # ══════════════════════════════════
+                # ▼ 4. 사냥 루틴 (v2: LCP 대응) ▼
+                # ══════════════════════════════════
                 weights_cfg = self.config.get("hunt_weights", {
                     "routine": 0.5, "skillA": 0.25, "skillB": 0.25
                 })
-                categories = list(weights_cfg.keys())
-                weights = list(weights_cfg.values())
+                
+                # v2: LCP 대응 가중치 조정
+                adjusted_weights = self.behavior.get_anti_lcp_weights(weights_cfg)
+                
+                categories = list(adjusted_weights.keys())
+                weights = list(adjusted_weights.values())
                 
                 # 패턴이 있는 카테고리만 필터링
                 available = []
@@ -288,15 +369,48 @@ class CoreController:
                 
                 if available:
                     selected = random.choices(available, weights=available_weights, k=1)[0]
+                    
+                    # v2: 패턴 사용 기록 (LCP 히스토리)
+                    self.behavior.record_pattern_used(selected)
+                    
+                    # v2: 패턴 사이 미세 이동 삽입 (15~25% 확률)
+                    if self.behavior.should_insert_movement_noise():
+                        direction, hold_ms = self.behavior.get_movement_noise()
+                        self.input_engine.press_key(direction, hold_ms=hold_ms)
+                        time.sleep(random.uniform(0.05, 0.15))
+                    
+                    # v2: 인간 리듬 기반 속도 팩터
+                    speed = self.rhythm.get_replay_speed_factor()
+                    
+                    # v2: 피로도 반영
+                    fatigue = self.behavior.get_fatigue_speed_factor()
+                    final_speed = speed * fatigue
+                    
                     self.pattern_engine.play_random(
                         selected, stop_check=self._should_stop_pattern
                     )
+                    
+                    self._cycle_count += 1
+                    
+                    # v2: 실수 시뮬레이션 (확률적)
+                    if self.rhythm.should_make_mistake():
+                        mistake = self.rhythm.get_mistake_action()
+                        self._execute_mistake(mistake)
+                    
                 else:
                     self._log("사용 가능한 패턴 없음. 대기 중...")
                     time.sleep(2.0)
                 
-                # 사이클 간 딜레이 (Weing: 0.38~0.49초)
-                time.sleep(random.uniform(0.38, 0.49))
+                # ══════════════════════════════════
+                # ▼ 사이클 간 딜레이 (v2: 인간 리듬) ▼
+                # ══════════════════════════════════
+                cycle_delay = self.rhythm.get_cycle_delay_sec()
+                session_mod = self.behavior.get_session_delay_modifier()
+                actual_delay = cycle_delay * session_mod
+                time.sleep(actual_delay)
+                
+                # 지터 삽입
+                self.timing.insert_jitter_if_needed()
                 
             except Exception as e:
                 self._log(f"사냥 루프 오류: {e}")
@@ -304,16 +418,45 @@ class CoreController:
         
         self._log("사냥 루프 종료")
 
+    # ─── 실수 실행 (v2) ───
+
+    def _execute_mistake(self, mistake: dict) -> None:
+        """실수 행동을 실행한다."""
+        try:
+            mtype = mistake.get("type", "")
+            
+            if mtype == "wrong_key":
+                # 잘못된 키를 살짝 누르고 바로 뗌
+                key = mistake.get("key", "q")
+                hold = mistake.get("hold_ms", 25)
+                self.input_engine.press_key(key, hold_ms=hold)
+                self._log(f"[리듬] 실수: 잘못된 키 '{key}' 터치")
+                
+            elif mtype == "double_tap":
+                # 같은 키 연타 실수
+                count = mistake.get("count", 2)
+                if self.behavior._pattern_history:
+                    # 아무 일반 키 연타
+                    for _ in range(count):
+                        self.input_engine.press_key("lalt", hold_ms=random.uniform(20, 40))
+                        time.sleep(random.uniform(0.03, 0.08))
+                self._log(f"[리듬] 실수: 연타 {count}회")
+                
+            elif mtype == "stuck_key":
+                # 키가 살짝 더 눌림
+                extra = mistake.get("extra_ms", 200)
+                time.sleep(extra / 1000.0)
+                self._log(f"[리듬] 실수: 키 홀드 +{extra:.0f}ms")
+                
+        except Exception:
+            pass  # 실수 실행 실패는 무시
+
     # ─── 감시 루프 ───
 
     def _monitor_loop(self) -> None:
         """
         화면 감시 루프 (별도 스레드).
-        
-        Weing-3.0V의 checker()를 개선:
-        - 프레임 diff로 거탐 팝업 감지
-        - 우선순위: 거탐 > 룬 > 일반
-        - 자동 해결 시도 + 실패 시 알림
+        프레임 diff로 거탐 팝업 감지, 우선순위: 거탐 > 룬 > 일반.
         """
         self._log("감시 루프 시작")
         
@@ -325,7 +468,7 @@ class CoreController:
                     time.sleep(0.5)
                     continue
                 
-                # ─── 거탐 감지 (프레임 diff) ───
+                # 거탐 감지 (프레임 diff)
                 changes = self.screen_monitor.detect_screen_change(
                     threshold=20, min_area=2000
                 )
@@ -335,13 +478,13 @@ class CoreController:
                     if alert_type:
                         self._handle_alert(alert_type)
                 
-                # ─── 룬 감지 ───
+                # 룬 감지
                 rune_result = self.screen_monitor.find_template("rune_indicator")
                 if rune_result and rune_result.found:
                     self._handle_rune()
                 
-                # 감시 주기 (랜덤화)
-                time.sleep(random.uniform(0.5, 1.0))
+                # v2: 감시 주기도 인간 리듬으로 랜덤화
+                time.sleep(random.uniform(0.4, 1.2))
                 
             except Exception as e:
                 self._log(f"감시 루프 오류: {e}")
@@ -352,30 +495,18 @@ class CoreController:
     # ─── 거탐 처리 ───
 
     def _classify_alert(self, changes: list) -> Optional[str]:
-        """
-        화면 변화 정보를 기반으로 거짓말 탐지기 유형을 분류한다.
-        
-        분류 기준:
-        - 텍스트 거탐: 특정 크기의 입력 UI 패턴
-        - 클릭 거탐: 작은 반투명 창
-        - 비올레타: 대형 미니게임 UI
-        """
-        # 가장 큰 변화 영역 기준으로 판단
+        """화면 변화를 기반으로 거짓말 탐지기 유형을 분류한다."""
         if not changes:
             return None
         
         largest = max(changes, key=lambda c: c.get("area", 0))
         area = largest.get("area", 0)
         
-        # 넓은 영역 변화 = 거탐 또는 비올레타
         if area > 50000:
-            # 비올레타/투명도형 등 대형 UI → 수동 대응
             return "violetta"
         elif area > 10000:
-            # 텍스트 거탐 또는 클릭 거탐
             return "text_captcha"
         elif area > 3000:
-            # 클릭 거탐 (작은 반투명 창)
             return "click_5"
         
         return None
@@ -387,17 +518,19 @@ class CoreController:
         
         self._log(f"거짓말 탐지기 감지: {alert_type}")
         
-        # 수동 대응 목록에 있으면 알림만
         if alert_type in manual_list:
             self._change_state(State.MANUAL_MODE)
             self.notifier.notify(f"⚠️ {alert_type} 감지! 수동 해결이 필요합니다!")
             self._log(f"{alert_type}: 수동 해결 필요 → 알림 전송")
             return
         
-        # 자동 해결 시도
         if alert_type in auto_solve_list:
             prev_state = self.state_machine.current
             self._change_state(State.ALERT_SOLVING)
+            
+            # v2: 거탐 반응 전 사람다운 딜레이
+            reaction_delay = random.uniform(0.5, 2.0)
+            time.sleep(reaction_delay)
             
             success = False
             try:
@@ -412,13 +545,14 @@ class CoreController:
             
             if success:
                 self._log(f"{alert_type} 자동 해결 성공")
+                # v2: 해결 후 사람다운 잠깐 멈춤 (안도감)
+                time.sleep(random.uniform(0.5, 1.5))
                 self._change_state(prev_state)
             else:
                 self._log(f"{alert_type} 자동 해결 실패 → 수동 모드 전환")
                 self.notifier.notify(f"거탐 자동 해결 실패: {alert_type}")
                 self._change_state(State.MANUAL_MODE)
         else:
-            # 분류 불가 → 알림
             self.notifier.notify(f"알 수 없는 거탐 유형: {alert_type}")
 
     def _handle_rune(self) -> None:
@@ -428,21 +562,24 @@ class CoreController:
         self._log("룬 감지 → 해결 시도")
         
         try:
-            # 룬 위치로 이동 패턴 실행
+            # v2: 룬 감지 후 사람다운 반응 딜레이
+            time.sleep(random.uniform(0.8, 2.5))
+            
             if self.pattern_engine.get_pattern_count("move") > 0:
                 self.pattern_engine.play_random(
                     "move", stop_check=self._should_stop_pattern
                 )
             
-            time.sleep(0.5)
+            time.sleep(random.uniform(0.3, 0.8))
             
-            # 룬 활성화 (스페이스바)
+            # 룬 활성화
             self.input_engine.press_key("space")
-            time.sleep(1.0)
+            time.sleep(random.uniform(0.8, 1.5))
             
             # 화살표 감지 + 입력
             arrows = self.screen_monitor.detect_rune_arrows()
             if arrows:
+                # v2: 화살표 사이에 인간 딜레이
                 self.rune_solver.solve(arrows, self.input_engine)
                 self._log(f"룬 해결 시도: {arrows}")
             else:
@@ -468,3 +605,7 @@ class CoreController:
         if self._session_start <= 0:
             return 0.0
         return (time.time() - self._session_start) / 60
+
+    def get_cycle_count(self) -> int:
+        """현재 세션의 사이클 수를 반환한다."""
+        return self._cycle_count
