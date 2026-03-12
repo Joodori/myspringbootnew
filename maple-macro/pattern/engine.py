@@ -171,6 +171,14 @@ class PatternEngine:
         # 녹화된 이벤트가 있으면 자동 저장
         if events:
             self.save_pattern(category, events)
+            # 디버그: 첫 5개 이벤트 로깅
+            import logging
+            _log = logging.getLogger(__name__)
+            _log.info(f"녹화 완료: {len(events)}개 이벤트")
+            for ev in events[:5]:
+                _log.info(f"  {ev}")
+            if len(events) > 5:
+                _log.info(f"  ... 외 {len(events)-5}개")
 
         return events
 
@@ -206,7 +214,14 @@ class PatternEngine:
     ) -> None:
         """
         keyboard 라이브러리로 키보드 이벤트를 녹화한다 (인터셉션 없을 때 폴백).
+
+        keyboard 라이브러리의 scan_code는 OS가 반환하는 값이며,
+        키에 따라 0일 수 있다 → 키 이름 기반 매핑을 우선한다.
+        녹화 중지에 사용된 F9 이벤트는 자동으로 제외한다.
         """
+        import logging
+        _log = logging.getLogger(__name__)
+
         try:
             import keyboard as kb
         except ImportError:
@@ -225,19 +240,61 @@ class PatternEngine:
         finally:
             kb.unhook_all()
 
-        # keyboard 이벤트를 PatternEvent로 변환
-        # 스캔코드 매핑 (역방향)
+        if not recorded:
+            return
+
+        # ── 스캔코드 매핑 테이블 준비 ──
         from input.engine import _SCAN_CODES
-        name_to_scan = {name: code for name, code in _SCAN_CODES.items()}
+        name_to_scan: dict[str, int] = {name: code for name, code in _SCAN_CODES.items()}
+
+        # keyboard 라이브러리가 반환하는 특수 이름 → 우리 이름 매핑
+        _KB_NAME_ALIASES: dict[str, str] = {
+            # 방향키
+            "왼쪽": "left", "오른쪽": "right", "위": "up", "아래": "down",
+            "left arrow": "left", "right arrow": "right",
+            "up arrow": "up", "down arrow": "down",
+            # 보조키
+            "shift": "lshift", "left shift": "lshift", "right shift": "rshift",
+            "ctrl": "lctrl", "left ctrl": "lctrl", "right ctrl": "rctrl",
+            "alt": "lalt", "left alt": "lalt", "right alt": "ralt",
+            "left menu": "lalt", "right menu": "ralt",
+            # 기능키
+            "return": "enter", "escape": "esc",
+            "page up": "pageup", "page down": "pagedown",
+            "del": "delete", "ins": "insert",
+        }
+
+        # F9 스캔코드 (녹화 중지키) 필터링용
+        _STOP_KEY_NAMES = {"f9"}
+
+        base_time = recorded[0].time
+        converted_count = 0
+        skipped_count = 0
 
         for e in recorded:
-            elapsed_ms = (e.time - recorded[0].time) * 1000.0 if recorded else 0.0
+            key_name_raw = (e.name or "").lower().strip()
+
+            # F9는 녹화 중지키이므로 제외
+            if key_name_raw in _STOP_KEY_NAMES:
+                continue
+
+            elapsed_ms = (e.time - base_time) * 1000.0
             event_type = "key_down" if e.event_type == "down" else "key_up"
-            # 키 이름으로 스캔코드 찾기
-            key_name = e.name.lower() if e.name else ""
-            scan = e.scan_code if e.scan_code else name_to_scan.get(key_name, 0)
+
+            # 1단계: 키 이름을 정규화
+            key_name = _KB_NAME_ALIASES.get(key_name_raw, key_name_raw)
+
+            # 2단계: 스캔코드 결정 (이름 매핑 우선, 없으면 keyboard 라이브러리 값 사용)
+            scan = name_to_scan.get(key_name, 0)
+            if scan == 0 and e.scan_code:
+                # 이름으로 못 찾으면 keyboard 라이브러리의 scan_code를 그대로 사용
+                scan = e.scan_code
+
             if scan == 0:
-                continue  # 알 수 없는 키 무시
+                skipped_count += 1
+                _log.debug(f"녹화 무시: name='{key_name_raw}', scan_code={e.scan_code}")
+                continue
+
             event = PatternEvent(
                 event_type=event_type,
                 key_code=scan,
@@ -245,6 +302,12 @@ class PatternEngine:
                 timestamp=max(0, elapsed_ms),
             )
             events.append(event)
+            converted_count += 1
+
+        _log.info(
+            f"녹화 변환 완료: {converted_count}개 이벤트 저장, "
+            f"{skipped_count}개 스킵, 원본 {len(recorded)}개"
+        )
 
     def play_random(
         self,
@@ -258,20 +321,33 @@ class PatternEngine:
         - 재생 중 주기적으로 지터를 삽입한다.
         반환: 재생 성공 여부
         """
+        import logging
+        _log = logging.getLogger(__name__)
+
         if category not in self.CATEGORIES:
+            _log.warning(f"play_random: 알 수 없는 카테고리 '{category}'")
             return False
         patterns = self._patterns.get(category, [])
         if not patterns:
+            _log.warning(f"play_random: '{category}' 패턴 없음")
             return False
 
         engine = _get_input_engine()
         if engine is None:
+            _log.error("play_random: 입력 엔진 없음 (None)")
             return False
 
         # 랜덤 패턴 선택
         pattern = random.choice(patterns)
         if not pattern:
+            _log.warning(f"play_random: 빈 패턴 선택됨")
             return False
+
+        _log.info(
+            f"play_random: '{category}' 재생 시작 "
+            f"({len(pattern)}개 이벤트, "
+            f"duration={pattern[-1].timestamp:.0f}ms)"
+        )
 
         # 전체 속도 팩터 결정 (설정에서 로드)
         cfg = Config()
