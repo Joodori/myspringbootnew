@@ -21,7 +21,7 @@ interception-python>=1.0.1
 scipy>=1.10.0
 
 # ─── 알림 사운드 ───
-playsound>=1.3.0
+# playsound 불필요 - winsound (Windows 내장) 사용
 
 # ─── 빌드 ───
 pyinstaller>=6.0.0

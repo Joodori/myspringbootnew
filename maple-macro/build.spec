@@ -24,7 +24,7 @@ a = Analysis(
         'keyboard',
         'mouse',
         'scipy',
-        'playsound',
+        # playsound 제거 - winsound (내장) 사용
     ],
     hookspath=[],
     hooksconfig={},
