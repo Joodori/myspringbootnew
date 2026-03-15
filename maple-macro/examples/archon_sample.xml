@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<macro>
+<macroinfo name="메이플 한바퀴" times="1" type="1" delaytime="10"/>
+<macroitems>
+<item desc="Down" type="2" value="40" delay_time="246"/>
+<item desc="Alt" type="2" value="164" delay_time="166"/>
+<item desc="Alt" type="3" value="164" delay_time="87"/>
+<item desc="Down" type="3" value="40" delay_time="140"/>
+<item desc="4" type="2" value="52" delay_time="147"/>
+<item desc="4" type="3" value="52" delay_time="465"/>
+<item desc="Alt" type="2" value="164" delay_time="155"/>
+<item desc="Alt" type="3" value="164" delay_time="131"/>
+<item desc="Alt" type="2" value="164" delay_time="137"/>
+<item desc="Alt" type="3" value="164" delay_time="1331"/>
+<item desc="Alt" type="2" value="164" delay_time="112"/>
+<item desc="Alt" type="3" value="164" delay_time="79"/>
+<item desc="Alt" type="2" value="164" delay_time="133"/>
+<item desc="Alt" type="3" value="164" delay_time="1141"/>
+<item desc="Alt" type="2" value="164" delay_time="118"/>
+<item desc="Alt" type="3" value="164" delay_time="300"/>
+<item desc="Alt" type="2" value="164" delay_time="138"/>
+<item desc="Alt" type="3" value="164" delay_time="852"/>
+<item desc="Home" type="2" value="36" delay_time="221"/>
+<item desc="Home" type="3" value="36" delay_time="386"/>
+<item desc="Up" type="2" value="38" delay_time="226"/>
+<item desc="Alt" type="2" value="164" delay_time="95"/>
+<item desc="Alt" type="3" value="164" delay_time="93"/>
+<item desc="Alt" type="2" value="164" delay_time="87"/>
+<item desc="Alt" type="3" value="164" delay_time="64"/>
+<item desc="Up" type="3" value="38" delay_time="761"/>
+<item desc="Up" type="2" value="38" delay_time="107"/>
+<item desc="Alt" type="2" value="164" delay_time="83"/>
+<item desc="Alt" type="3" value="164" delay_time="69"/>
+<item desc="Alt" type="2" value="164" delay_time="78"/>
+<item desc="Alt" type="3" value="164" delay_time="72"/>
+<item desc="Up" type="3" value="38" delay_time="994"/>
+<item desc="Right" type="2" value="39" delay_time="100"/>
+<item desc="Right" type="3" value="39" delay_time="104"/>
+<item desc="Delete" type="2" value="46" delay_time="84"/>
+<item desc="Delete" type="3" value="46" delay_time="770"/>
+<item desc="Alt" type="2" value="164" delay_time="92"/>
+<item desc="Alt" type="3" value="164" delay_time="91"/>
+<item desc="Alt" type="2" value="164" delay_time="94"/>
+<item desc="Alt" type="3" value="164" delay_time="961"/>
+<item desc="Alt" type="2" value="164" delay_time="97"/>
+<item desc="Alt" type="3" value="164" delay_time="124"/>
+<item desc="Alt" type="2" value="164" delay_time="111"/>
+<item desc="Alt" type="3" value="164" delay_time="1193"/>
+<item desc="Alt" type="2" value="164" delay_time="112"/>
+<item desc="Alt" type="3" value="164" delay_time="216"/>
+<item desc="Alt" type="2" value="164" delay_time="103"/>
+<item desc="Alt" type="3" value="164" delay_time="965"/>
+<item desc="Down" type="2" value="40" delay_time="146"/>
+<item desc="Alt" type="2" value="164" delay_time="116"/>
+<item desc="Alt" type="3" value="164" delay_time="124"/>
+<item desc="Left" type="2" value="37" delay_time="12"/>
+<item desc="Down" type="3" value="40" delay_time="108"/>
+<item desc="Left" type="3" value="37" delay_time="671"/>
+<item desc="W" type="2" value="87" delay_time="113"/>
+<item desc="W" type="3" value="87" delay_time="0"/>
+</macroitems>
+</macro>

@@ -24,7 +24,7 @@ try:
         QPushButton, QLabel, QStatusBar, QGroupBox, QListWidget,
         QCheckBox, QTabWidget, QTextEdit, QFrame, QSplitter,
         QMessageBox, QListWidgetItem, QSizePolicy, QComboBox,
-        QSpinBox, QProgressBar, QToolTip,
+        QSpinBox, QProgressBar, QToolTip, QFileDialog,
     )
     from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QSize
     from PyQt5.QtGui import QFont, QColor, QPalette, QIcon, QTextCursor
@@ -477,6 +477,49 @@ if _PYQT_AVAILABLE:
 
             layout.addLayout(rec_settings)
 
+            # ── Archon XML 가져오기 + 위치 보정 설정 ──
+            import_layout = QHBoxLayout()
+            import_layout.setSpacing(4)
+
+            self._import_xml_btn = QPushButton("XML 가져오기")
+            self._import_xml_btn.setToolTip(
+                "Archon AK47 매크로 파일(.xml)을 가져와\n"
+                "선택된 카테고리에 패턴으로 저장합니다"
+            )
+            self._import_xml_btn.setFixedHeight(28)
+            self._import_xml_btn.setStyleSheet(
+                f"background-color: #1a237e; border-color: #283593;"
+            )
+            import_layout.addWidget(self._import_xml_btn)
+
+            import_layout.addWidget(QLabel("보정:"))
+            self._reset_dir_combo = QComboBox()
+            self._reset_dir_combo.addItem("← 왼쪽", "left")
+            self._reset_dir_combo.addItem("→ 오른쪽", "right")
+            self._reset_dir_combo.addItem("없음", "none")
+            self._reset_dir_combo.setToolTip(
+                "매크로 시작 전 캐릭터 위치를 고정하는 방향\n"
+                "맵 끝까지 이동하여 항상 같은 위치에서 시작"
+            )
+            self._reset_dir_combo.setFixedWidth(80)
+            import_layout.addWidget(self._reset_dir_combo)
+
+            import_layout.addWidget(QLabel("이동:"))
+            self._reset_walk_spin = QSpinBox()
+            self._reset_walk_spin.setRange(0, 10000)
+            self._reset_walk_spin.setValue(3000)
+            self._reset_walk_spin.setSuffix("ms")
+            self._reset_walk_spin.setSingleStep(500)
+            self._reset_walk_spin.setToolTip(
+                "맵 끝으로 이동하는 시간 (ms)\n"
+                "맵이 클수록 더 길게 설정 (3000~5000추천)\n"
+                "0이면 위치 보정 없이 바로 매크로 실행"
+            )
+            self._reset_walk_spin.setFixedWidth(90)
+            import_layout.addWidget(self._reset_walk_spin)
+
+            layout.addLayout(import_layout)
+
             # 기본 카테고리 선택
             self._select_category("routine")
 
@@ -603,6 +646,7 @@ if _PYQT_AVAILABLE:
             self._record_btn.clicked.connect(self._on_record_toggle)
             self._test_btn.clicked.connect(self._on_test_pattern)
             self._delete_btn.clicked.connect(self._on_delete_pattern)
+            self._import_xml_btn.clicked.connect(self._on_import_xml)
 
             # 스레드-안전 시그널
             self.sig_state_changed.connect(self._on_state_changed_ui)
@@ -818,6 +862,53 @@ if _PYQT_AVAILABLE:
                     self._log(f"[오류] 삭제 실패: {e}")
 
                 self._refresh_pattern_counts()
+
+        def _on_import_xml(self) -> None:
+            """Archon AK47 XML 가져오기 핸들러."""
+            if not self._controller:
+                self._log("[오류] 컨트롤러가 연결되지 않았습니다.")
+                return
+
+            # 파일 선택 다이얼로그
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Archon AK47 매크로 파일 선택",
+                "",
+                "XML 파일 (*.xml);;All Files (*)",
+            )
+            if not file_path:
+                return  # 취소
+
+            cat = self._current_category
+
+            # 위치 보정 설정 읽기
+            dir_data = self._reset_dir_combo.currentData()
+            walk_ms = self._reset_walk_spin.value()
+
+            if dir_data == "none":
+                walk_ms = 0
+
+            self._log(
+                f"[Archon] XML 가져오기: {os.path.basename(file_path)} "
+                f"→ {cat}"
+            )
+            if walk_ms > 0:
+                self._log(
+                    f"[Archon] 위치 보정: {dir_data} {walk_ms}ms"
+                )
+
+            success = self._controller.import_archon_xml(
+                xml_path=file_path,
+                category=cat,
+                reset_direction=dir_data if dir_data != "none" else "left",
+                reset_walk_ms=walk_ms,
+            )
+
+            if success:
+                self._refresh_pattern_counts()
+                self._log(f"[Archon] 가져오기 완료!")
+            else:
+                self._log(f"[Archon] 가져오기 실패")
 
         # ─── 상태 업데이트 (스레드-안전) ───
 

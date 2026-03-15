@@ -25,6 +25,7 @@ from core.human_rhythm import HumanRhythm
 from core.process_guard import ProcessGuard
 from pattern.engine import PatternEngine
 from pattern.engine import set_input_engine as _set_pattern_input_engine
+from pattern.archon_import import import_archon_with_position_reset, parse_archon_xml
 from screen.monitor import ScreenMonitor
 from input.engine import InputEngine
 from input.human_mouse import HumanLikeMouse
@@ -342,6 +343,49 @@ class CoreController:
             time.sleep(0.3)  # 창 전환 애니메이션 대기
         except Exception as e:
             self._log(f"Alt+Tab 전송 오류: {e}")
+
+    # ─── Archon XML 가져오기 ───
+
+    def import_archon_xml(self, xml_path: str, category: str,
+                          reset_direction: str = "left",
+                          reset_walk_ms: int = 3000) -> bool:
+        """
+        Archon AK47 매크로 XML 파일을 가져와 패턴으로 저장한다.
+
+        xml_path: Archon XML 파일 경로
+        category: 저장할 카테고리 (routine, buff 등)
+        reset_direction: 위치 보정 방향 ("left" 또는 "right")
+        reset_walk_ms: 위치 보정 이동 시간(ms). 0이면 보정 없이 매크로만.
+        """
+        try:
+            if reset_walk_ms > 0:
+                events = import_archon_with_position_reset(
+                    xml_path, reset_direction, reset_walk_ms
+                )
+            else:
+                events = parse_archon_xml(xml_path)
+
+            if not events:
+                self._log(f"[Archon] XML 변환 실패: 이벤트 없음")
+                return False
+
+            saved = self.pattern_engine.save_pattern(category, events)
+            if saved:
+                self._log(
+                    f"[Archon] 가져오기 성공: {category} "
+                    f"({len(events)}개 이벤트, "
+                    f"{events[-1].timestamp:.0f}ms)"
+                )
+                if self._on_pattern_count_change:
+                    self._on_pattern_count_change()
+                return True
+            else:
+                self._log(f"[Archon] 패턴 저장 실패")
+                return False
+
+        except Exception as e:
+            self._log(f"[Archon] 가져오기 오류: {e}")
+            return False
 
     # ─── 사냥 루프 (v2: 안티 감지 통합) ───
 
