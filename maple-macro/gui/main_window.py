@@ -35,17 +35,17 @@ except ImportError:
 
 # ─── 색상 상수 ───
 _COLORS = {
-    "bg_dark": "#1a1a2e",
-    "bg_panel": "#16213e",
-    "bg_input": "#0f3460",
-    "accent": "#e94560",
-    "accent_hover": "#ff6b6b",
-    "text": "#eaeaea",
-    "text_dim": "#8892b0",
-    "green": "#00e676",
-    "yellow": "#ffd600",
-    "red": "#ff1744",
-    "border": "#233554",
+    "bg_dark": "#FFFFFF",
+    "bg_panel": "#F8F8F8",
+    "bg_input": "#F0F0F0",
+    "accent": "#2196F3",
+    "accent_hover": "#1976D2",
+    "text": "#222222",
+    "text_dim": "#888888",
+    "green": "#2E7D32",
+    "yellow": "#F57F17",
+    "red": "#C62828",
+    "border": "#DDDDDD",
 }
 
 _STYLE_SHEET = f"""
@@ -55,176 +55,217 @@ QMainWindow {{
 QWidget {{
     color: {_COLORS['text']};
     font-family: 'Malgun Gothic', 'Segoe UI', sans-serif;
-    font-size: 12px;
+    font-size: 13px;
 }}
 QGroupBox {{
     border: 1px solid {_COLORS['border']};
     border-radius: 6px;
-    margin-top: 10px;
-    padding-top: 14px;
+    margin-top: 12px;
+    padding-top: 18px;
+    padding-bottom: 6px;
     font-weight: bold;
-    font-size: 12px;
+    font-size: 13px;
+    background-color: {_COLORS['bg_panel']};
 }}
 QGroupBox::title {{
     subcontrol-origin: margin;
-    left: 10px;
-    padding: 0 6px;
-    color: {_COLORS['accent']};
+    left: 12px;
+    padding: 0 8px;
+    color: {_COLORS['text']};
 }}
 QPushButton {{
     background-color: {_COLORS['bg_input']};
     border: 1px solid {_COLORS['border']};
-    border-radius: 4px;
-    padding: 6px 14px;
-    min-height: 24px;
+    border-radius: 5px;
+    padding: 8px 16px;
+    min-height: 32px;
     font-weight: bold;
+    font-size: 13px;
+    color: {_COLORS['text']};
 }}
 QPushButton:hover {{
-    background-color: {_COLORS['accent']};
-    border-color: {_COLORS['accent']};
+    background-color: #E0E0E0;
+    border-color: #BBBBBB;
 }}
 QPushButton:pressed {{
-    background-color: {_COLORS['accent_hover']};
+    background-color: #D0D0D0;
 }}
 QPushButton:disabled {{
-    background-color: #2a2a3e;
-    color: #555;
+    background-color: #F5F5F5;
+    color: #BBBBBB;
+    border-color: #E8E8E8;
 }}
 QPushButton#startBtn {{
-    background-color: #1b5e20;
-    border-color: #2e7d32;
+    background-color: #4CAF50;
+    border-color: #388E3C;
+    color: white;
     font-size: 14px;
-    min-height: 36px;
+    min-height: 42px;
 }}
 QPushButton#startBtn:hover {{
-    background-color: #2e7d32;
+    background-color: #388E3C;
+}}
+QPushButton#startBtn:disabled {{
+    background-color: #A5D6A7;
+    color: #E8E8E8;
+    border-color: #A5D6A7;
 }}
 QPushButton#stopBtn {{
-    background-color: #b71c1c;
-    border-color: #c62828;
+    background-color: #F44336;
+    border-color: #D32F2F;
+    color: white;
     font-size: 14px;
-    min-height: 36px;
+    min-height: 42px;
 }}
 QPushButton#stopBtn:hover {{
-    background-color: #c62828;
+    background-color: #D32F2F;
+}}
+QPushButton#stopBtn:disabled {{
+    background-color: #EF9A9A;
+    color: #E8E8E8;
+    border-color: #EF9A9A;
 }}
 QPushButton#pauseBtn {{
-    background-color: #e65100;
-    border-color: #ef6c00;
+    background-color: #FF9800;
+    border-color: #F57C00;
+    color: white;
     font-size: 14px;
-    min-height: 36px;
+    min-height: 42px;
 }}
 QPushButton#pauseBtn:hover {{
-    background-color: #ef6c00;
+    background-color: #F57C00;
+}}
+QPushButton#pauseBtn:disabled {{
+    background-color: #FFCC80;
+    color: #E8E8E8;
+    border-color: #FFCC80;
 }}
 QPushButton#recordBtn {{
-    background-color: #880e4f;
-    border-color: #ad1457;
+    background-color: #9C27B0;
+    border-color: #7B1FA2;
+    color: white;
 }}
 QPushButton#recordBtn:hover {{
-    background-color: #ad1457;
+    background-color: #7B1FA2;
 }}
 QPushButton#deleteBtn {{
-    background-color: #4a0000;
-    border-color: #6a0000;
+    background-color: #FFEBEE;
+    border-color: #EF9A9A;
+    color: #C62828;
 }}
 QPushButton#deleteBtn:hover {{
-    background-color: #b71c1c;
+    background-color: #FFCDD2;
+    border-color: #E57373;
 }}
 QListWidget {{
-    background-color: {_COLORS['bg_panel']};
+    background-color: #FFFFFF;
     border: 1px solid {_COLORS['border']};
-    border-radius: 4px;
+    border-radius: 5px;
     padding: 4px;
     font-family: 'Consolas', 'D2Coding', monospace;
-    font-size: 11px;
+    font-size: 12px;
+    color: {_COLORS['text']};
 }}
 QListWidget::item {{
-    padding: 3px 6px;
-    border-radius: 2px;
+    padding: 4px 8px;
+    border-radius: 3px;
 }}
 QListWidget::item:selected {{
-    background-color: {_COLORS['accent']};
+    background-color: #E3F2FD;
+    color: #1565C0;
+}}
+QListWidget::item:hover {{
+    background-color: #F5F5F5;
 }}
 QTextEdit {{
-    background-color: {_COLORS['bg_panel']};
+    background-color: #FFFFFF;
     border: 1px solid {_COLORS['border']};
-    border-radius: 4px;
-    padding: 6px;
+    border-radius: 5px;
+    padding: 8px;
     font-family: 'Consolas', 'D2Coding', monospace;
-    font-size: 11px;
-    color: {_COLORS['text_dim']};
+    font-size: 12px;
+    color: {_COLORS['text']};
 }}
 QCheckBox {{
-    spacing: 6px;
-    font-size: 11px;
+    spacing: 8px;
+    font-size: 13px;
+    padding: 2px 0px;
 }}
 QCheckBox::indicator {{
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border: 1px solid {_COLORS['border']};
     border-radius: 3px;
-    background-color: {_COLORS['bg_panel']};
+    background-color: #FFFFFF;
 }}
 QCheckBox::indicator:checked {{
     background-color: {_COLORS['accent']};
     border-color: {_COLORS['accent']};
 }}
+QCheckBox::indicator:hover {{
+    border-color: #AAAAAA;
+}}
 QComboBox {{
-    background-color: {_COLORS['bg_input']};
+    background-color: #FFFFFF;
     border: 1px solid {_COLORS['border']};
-    border-radius: 4px;
-    padding: 4px 8px;
-    min-height: 22px;
+    border-radius: 5px;
+    padding: 4px 10px;
+    min-height: 28px;
+    font-size: 13px;
 }}
 QComboBox::drop-down {{
     border: none;
-    width: 20px;
+    width: 24px;
 }}
 QSpinBox {{
-    background-color: {_COLORS['bg_input']};
+    background-color: #FFFFFF;
     border: 1px solid {_COLORS['border']};
-    border-radius: 4px;
-    padding: 2px 6px;
+    border-radius: 5px;
+    padding: 4px 8px;
+    min-height: 26px;
+    font-size: 13px;
 }}
 QProgressBar {{
     border: 1px solid {_COLORS['border']};
-    border-radius: 4px;
+    border-radius: 5px;
     text-align: center;
-    background-color: {_COLORS['bg_panel']};
-    height: 18px;
-    font-size: 10px;
+    background-color: #F5F5F5;
+    height: 20px;
+    font-size: 11px;
+    color: {_COLORS['text']};
 }}
 QProgressBar::chunk {{
     background-color: {_COLORS['green']};
-    border-radius: 3px;
+    border-radius: 4px;
 }}
 QStatusBar {{
     background-color: {_COLORS['bg_panel']};
     border-top: 1px solid {_COLORS['border']};
-    font-size: 11px;
+    font-size: 12px;
+    color: {_COLORS['text_dim']};
+    padding: 4px 8px;
 }}
 QTabWidget::pane {{
     border: 1px solid {_COLORS['border']};
-    border-radius: 4px;
+    border-radius: 5px;
     background-color: {_COLORS['bg_dark']};
 }}
 QTabBar::tab {{
     background-color: {_COLORS['bg_panel']};
     border: 1px solid {_COLORS['border']};
     border-bottom: none;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-    padding: 6px 14px;
-    font-size: 11px;
-    min-width: 60px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    padding: 8px 16px;
+    font-size: 12px;
+    min-width: 70px;
 }}
 QTabBar::tab:selected {{
     background-color: {_COLORS['accent']};
     color: white;
 }}
 QTabBar::tab:hover {{
-    background-color: {_COLORS['bg_input']};
+    background-color: #E0E0E0;
 }}
 """
 
@@ -232,13 +273,13 @@ QTabBar::tab:hover {{
 # ─── 상태 표시 색상 매핑 ───
 _STATE_COLORS = {
     "IDLE": (_COLORS["text_dim"], "대기 중"),
-    "HUNTING": (_COLORS["green"], "● 사냥 중"),
-    "PAUSED": (_COLORS["yellow"], "⏸ 일시정지"),
-    "BUFFING": ("#64b5f6", "◆ 버프 사용 중"),
-    "ALERT_SOLVING": (_COLORS["red"], "⚠ 거탐 해결 중"),
-    "RUNE_SOLVING": ("#ce93d8", "◈ 룬 해결 중"),
-    "MANUAL_MODE": (_COLORS["yellow"], "✋ 수동 모드"),
-    "RECORDING": ("#ff6e40", "⏺ 녹화 중"),
+    "HUNTING": ("#2E7D32", "● 사냥 중"),
+    "PAUSED": ("#F57F17", "⏸ 일시정지"),
+    "BUFFING": ("#1565C0", "◆ 버프 사용 중"),
+    "ALERT_SOLVING": ("#C62828", "⚠ 거탐 해결 중"),
+    "RUNE_SOLVING": ("#7B1FA2", "◈ 룬 해결 중"),
+    "MANUAL_MODE": ("#E65100", "✋ 수동 모드"),
+    "RECORDING": ("#D84315", "⏺ 녹화 중"),
 }
 
 # 패턴 카테고리 정의
@@ -276,8 +317,8 @@ if _PYQT_AVAILABLE:
             """메인 윈도우를 초기화하고 UI를 구성한다."""
             super().__init__(parent)
             self.setWindowTitle("메이플 매크로 헬퍼 v1.0")
-            self.setMinimumSize(380, 780)
-            self.resize(380, 780)
+            self.setMinimumSize(480, 860)
+            self.resize(480, 860)
 
             self._controller = None  # CoreController 참조
             self._current_category: str = "routine"
@@ -295,8 +336,8 @@ if _PYQT_AVAILABLE:
             central = QWidget()
             self.setCentralWidget(central)
             main_layout = QVBoxLayout(central)
-            main_layout.setContentsMargins(8, 8, 8, 4)
-            main_layout.setSpacing(6)
+            main_layout.setContentsMargins(14, 14, 14, 8)
+            main_layout.setSpacing(10)
 
             # 1. 상태 표시 영역
             main_layout.addWidget(self._create_status_section())
@@ -325,27 +366,27 @@ if _PYQT_AVAILABLE:
             """상태 표시 영역을 생성한다."""
             group = QGroupBox("상태")
             layout = QHBoxLayout(group)
-            layout.setContentsMargins(10, 6, 10, 6)
+            layout.setContentsMargins(14, 10, 14, 10)
 
             # 상태 LED + 텍스트
             self._state_label = QLabel("대기 중")
-            self._state_label.setFont(QFont("Malgun Gothic", 16, QFont.Bold))
+            self._state_label.setFont(QFont("Malgun Gothic", 18, QFont.Bold))
             self._state_label.setAlignment(Qt.AlignCenter)
             self._state_label.setStyleSheet(f"color: {_COLORS['text_dim']};")
             layout.addWidget(self._state_label, stretch=3)
 
             # 우측: 세션 타이머 + 패턴 카운트
             info_layout = QVBoxLayout()
-            info_layout.setSpacing(2)
+            info_layout.setSpacing(4)
 
             self._session_label = QLabel("세션: 00:00:00")
-            self._session_label.setFont(QFont("Consolas", 10))
+            self._session_label.setFont(QFont("Consolas", 11))
             self._session_label.setAlignment(Qt.AlignRight)
             self._session_label.setStyleSheet(f"color: {_COLORS['text_dim']};")
             info_layout.addWidget(self._session_label)
 
             self._cycle_label = QLabel("사이클: 0")
-            self._cycle_label.setFont(QFont("Consolas", 10))
+            self._cycle_label.setFont(QFont("Consolas", 11))
             self._cycle_label.setAlignment(Qt.AlignRight)
             self._cycle_label.setStyleSheet(f"color: {_COLORS['text_dim']};")
             info_layout.addWidget(self._cycle_label)
@@ -357,8 +398,8 @@ if _PYQT_AVAILABLE:
             """제어 버튼 영역을 생성한다."""
             group = QGroupBox("제어")
             layout = QHBoxLayout(group)
-            layout.setContentsMargins(8, 6, 8, 6)
-            layout.setSpacing(6)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(10)
 
             self._start_btn = QPushButton("▶ 시작 (F6)")
             self._start_btn.setObjectName("startBtn")
@@ -383,12 +424,12 @@ if _PYQT_AVAILABLE:
             """패턴 관리 영역 (카테고리별 녹화 + 파일 리스트)을 생성한다."""
             group = QGroupBox("패턴 관리")
             layout = QVBoxLayout(group)
-            layout.setContentsMargins(8, 6, 8, 6)
-            layout.setSpacing(4)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(8)
 
             # 카테고리 버튼 (가로 배열)
             cat_layout = QHBoxLayout()
-            cat_layout.setSpacing(3)
+            cat_layout.setSpacing(6)
 
             self._cat_buttons: dict[str, QPushButton] = {}
             self._cat_count_labels: dict[str, QLabel] = {}
@@ -401,15 +442,15 @@ if _PYQT_AVAILABLE:
                 btn.setObjectName("recordBtn")
                 btn.setToolTip(f"{cat_desc} 녹화/관리")
                 btn.setCheckable(True)
-                btn.setMinimumWidth(52)
-                btn.setFixedHeight(32)
+                btn.setMinimumWidth(74)
+                btn.setFixedHeight(36)
                 btn.clicked.connect(lambda checked, c=cat_id: self._on_category_click(c))
                 self._cat_buttons[cat_id] = btn
                 btn_layout.addWidget(btn)
 
                 count_label = QLabel("0개")
                 count_label.setAlignment(Qt.AlignCenter)
-                count_label.setFont(QFont("Consolas", 9))
+                count_label.setFont(QFont("Consolas", 10))
                 count_label.setStyleSheet(f"color: {_COLORS['text_dim']};")
                 self._cat_count_labels[cat_id] = count_label
                 btn_layout.addWidget(count_label)
@@ -420,20 +461,20 @@ if _PYQT_AVAILABLE:
 
             # 파일 리스트 + 제어 버튼
             list_layout = QHBoxLayout()
-            list_layout.setSpacing(4)
+            list_layout.setSpacing(8)
 
             self._file_list = QListWidget()
-            self._file_list.setMinimumHeight(100)
-            self._file_list.setMaximumHeight(140)
+            self._file_list.setMinimumHeight(130)
+            self._file_list.setMaximumHeight(160)
             list_layout.addWidget(self._file_list, stretch=3)
 
             # 우측 버튼 (녹화, 테스트, 삭제)
             btn_side = QVBoxLayout()
-            btn_side.setSpacing(4)
+            btn_side.setSpacing(6)
 
             self._record_btn = QPushButton("⏺ 자동녹화\n(F9)")
             self._record_btn.setObjectName("recordBtn")
-            self._record_btn.setFixedSize(64, 44)
+            self._record_btn.setFixedSize(84, 50)
             self._record_btn.setToolTip(
                 "녹화 시작: 자동으로 게임창 전환 → 지정 시간 녹화 → 자동 종료\n"
                 "게임에서 실제로 사냥하는 키만 녹화됩니다"
@@ -441,13 +482,13 @@ if _PYQT_AVAILABLE:
             btn_side.addWidget(self._record_btn)
 
             self._test_btn = QPushButton("▶ 테스트")
-            self._test_btn.setFixedSize(64, 30)
+            self._test_btn.setFixedSize(84, 36)
             self._test_btn.setToolTip("선택한 패턴 1회 재생 테스트")
             btn_side.addWidget(self._test_btn)
 
             self._delete_btn = QPushButton("✕ 삭제")
             self._delete_btn.setObjectName("deleteBtn")
-            self._delete_btn.setFixedSize(64, 30)
+            self._delete_btn.setFixedSize(84, 36)
             self._delete_btn.setToolTip("선택한 패턴 파일 삭제")
             btn_side.addWidget(self._delete_btn)
 
@@ -458,7 +499,7 @@ if _PYQT_AVAILABLE:
 
             # 녹화 설정 + 카운트다운 표시
             rec_settings = QHBoxLayout()
-            rec_settings.setSpacing(4)
+            rec_settings.setSpacing(8)
 
             rec_settings.addWidget(QLabel("녹화 시간:"))
             self._rec_duration_spin = QSpinBox()
@@ -466,11 +507,11 @@ if _PYQT_AVAILABLE:
             self._rec_duration_spin.setValue(60)
             self._rec_duration_spin.setSuffix("초")
             self._rec_duration_spin.setToolTip("자동 녹화 지속 시간 (10~300초)")
-            self._rec_duration_spin.setFixedWidth(80)
+            self._rec_duration_spin.setFixedWidth(90)
             rec_settings.addWidget(self._rec_duration_spin)
 
             self._countdown_label = QLabel("")
-            self._countdown_label.setFont(QFont("Consolas", 11, QFont.Bold))
+            self._countdown_label.setFont(QFont("Consolas", 12, QFont.Bold))
             self._countdown_label.setAlignment(Qt.AlignCenter)
             self._countdown_label.setStyleSheet(f"color: {_COLORS['accent']};")
             rec_settings.addWidget(self._countdown_label, stretch=1)
@@ -479,16 +520,16 @@ if _PYQT_AVAILABLE:
 
             # ── Archon XML 가져오기 + 위치 보정 설정 ──
             import_layout = QHBoxLayout()
-            import_layout.setSpacing(4)
+            import_layout.setSpacing(8)
 
             self._import_xml_btn = QPushButton("XML 가져오기")
             self._import_xml_btn.setToolTip(
                 "Archon AK47 매크로 파일(.xml)을 가져와\n"
                 "선택된 카테고리에 패턴으로 저장합니다"
             )
-            self._import_xml_btn.setFixedHeight(28)
+            self._import_xml_btn.setFixedHeight(34)
             self._import_xml_btn.setStyleSheet(
-                f"background-color: #1a237e; border-color: #283593;"
+                "background-color: #E3F2FD; border-color: #90CAF9; color: #1565C0;"
             )
             import_layout.addWidget(self._import_xml_btn)
 
@@ -501,7 +542,7 @@ if _PYQT_AVAILABLE:
                 "매크로 시작 전 캐릭터 위치를 고정하는 방향\n"
                 "맵 끝까지 이동하여 항상 같은 위치에서 시작"
             )
-            self._reset_dir_combo.setFixedWidth(80)
+            self._reset_dir_combo.setFixedWidth(90)
             import_layout.addWidget(self._reset_dir_combo)
 
             import_layout.addWidget(QLabel("이동:"))
@@ -515,7 +556,7 @@ if _PYQT_AVAILABLE:
                 "맵이 클수록 더 길게 설정 (3000~5000추천)\n"
                 "0이면 위치 보정 없이 바로 매크로 실행"
             )
-            self._reset_walk_spin.setFixedWidth(90)
+            self._reset_walk_spin.setFixedWidth(100)
             import_layout.addWidget(self._reset_walk_spin)
 
             layout.addLayout(import_layout)
@@ -529,8 +570,8 @@ if _PYQT_AVAILABLE:
             """기능 토글 체크박스 영역을 생성한다."""
             group = QGroupBox("기능 설정")
             layout = QGridLayout(group)
-            layout.setContentsMargins(8, 6, 8, 6)
-            layout.setSpacing(4)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(8)
 
             self._chk_hotkey = QCheckBox("핫키 활성화")
             self._chk_hotkey.setChecked(True)
@@ -578,8 +619,8 @@ if _PYQT_AVAILABLE:
             """설정 영역을 생성한다."""
             group = QGroupBox("설정")
             layout = QGridLayout(group)
-            layout.setContentsMargins(8, 6, 8, 6)
-            layout.setSpacing(4)
+            layout.setContentsMargins(12, 10, 12, 10)
+            layout.setSpacing(8)
 
             # 세션 제한 시간
             layout.addWidget(QLabel("세션 제한(분):"), 0, 0)
@@ -609,13 +650,13 @@ if _PYQT_AVAILABLE:
             """로그 출력 영역을 생성한다."""
             group = QGroupBox("로그")
             layout = QVBoxLayout(group)
-            layout.setContentsMargins(6, 4, 6, 4)
-            layout.setSpacing(2)
+            layout.setContentsMargins(10, 8, 10, 8)
+            layout.setSpacing(6)
 
             self._log_text = QTextEdit()
             self._log_text.setReadOnly(True)
-            self._log_text.setMinimumHeight(120)
-            self._log_text.setMaximumHeight(180)
+            self._log_text.setMinimumHeight(140)
+            self._log_text.setMaximumHeight(200)
             self._log_text.setPlaceholderText("매크로 실행 로그가 여기에 표시됩니다...")
             layout.addWidget(self._log_text)
 
@@ -624,7 +665,7 @@ if _PYQT_AVAILABLE:
             log_btn_layout.setSpacing(4)
 
             self._clear_log_btn = QPushButton("로그 지우기")
-            self._clear_log_btn.setFixedHeight(24)
+            self._clear_log_btn.setFixedHeight(30)
             self._clear_log_btn.clicked.connect(self._log_text.clear)
             log_btn_layout.addWidget(self._clear_log_btn)
 
@@ -918,7 +959,7 @@ if _PYQT_AVAILABLE:
                 state_value, (_COLORS["text_dim"], state_value)
             )
             self._state_label.setText(text)
-            self._state_label.setStyleSheet(f"color: {color}; font-size: 16px;")
+            self._state_label.setStyleSheet(f"color: {color}; font-size: 18px;")
 
             # 상태에 따른 버튼 활성화
             is_running = state_value not in ("IDLE",)
